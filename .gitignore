@@ -1,0 +1,28 @@
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# 深度学习模型权重（单文件数百兆，GitHub单文件限100MB，严禁上传）
+checkpoints/
+**/checkpoints/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.onnx
+
+# 训练日志与 TensorBoard
+logs/
+**/logs/
+runs/
+*.log
+
+# IDE 与编辑器配置
+.idea/
+.vscode/
+
+# 环境变量敏感配置
+# .env
