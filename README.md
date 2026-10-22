@@ -6,6 +6,14 @@
 
 ## 🌟 核心特性
 1. **NER 实体识别**：基于 `google-bert/bert-base-chinese` 微调的 Token Classification 实体抽取模型，精准抽离品牌、商品及核心参数。
+
+<p align="center">
+  <img src="assets/8.png" width="850" alt="NER 模型训练评估指标" />
+</p>
+<p align="center">
+  <img src="assets/9.png" width="850" alt="NER 训练 Loss 与学习率变化" />
+</p>
+
 2. **知识图谱同步**：自动将关系型业务数据库（MySQL）同步对齐至 Neo4j 图数据库，构建实体关系网络。
 
 <p align="center">
