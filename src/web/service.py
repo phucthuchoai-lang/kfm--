@@ -130,14 +130,8 @@ class ChatService:
             answer = self._generate_answer(question, query_result)
             print("最终回答: ", answer)
             return answer
-        except Exception as e:
-            print(f"chat 处理异常: {e}")
-            # 兜底：直接让大模型回答用户，确保前端永不报错
-            try:
-                fallback_prompt = f"你是一个电商智能客服。用户提问：{question}。请用热情、亲切的语气简要回答用户。"
-                return self.str_parser.invoke(self.llm.invoke(fallback_prompt))
-            except Exception:
-                return "您好！我是电商智能客服，请问有什么关于具体商品或品牌的问题需要我帮助？"
+        except Exception:
+            return "图谱查询暂未成功，无法确认商品信息。请检查只读图谱配置或稍后重试。"
 
     # 1. 根据问题，调用 LLM 生成 Cypher
     def _generate_cypher(self, question):
@@ -199,6 +193,16 @@ class ChatService:
     def _execute_cypher(self, cypher, aligned_entities):
         if not cypher:
             return []
+        # The legacy experimental flow is isolated from the platform. Use a
+        # dedicated read-only Neo4j account as an additional database boundary.
+        if not all(NEO4J_READ_CONFIG['auth']):
+            raise ValueError('Configure a dedicated read-only graph account first')
+        if not re.match(r'^\s*MATCH\b', cypher, re.I) or re.search(
+            r'\b(CALL|CREATE|MERGE|SET|DELETE|DETACH|REMOVE|DROP|LOAD|FOREACH|UNION|WITH|SHOW|YIELD)\b|;|//|/\*', cypher, re.I
+        ):
+            raise ValueError('Unsupported graph query')
+        if len(cypher) > 4000:
+            raise ValueError('Query too long')
 
         # 正则规范化：确保参数名带有 $（如 param_0 -> $param_0）
         cypher = re.sub(r'(?<!\$)\b(param_\d+)\b', r'$\1', cypher)
@@ -209,16 +213,23 @@ class ChatService:
             val = aligned_entity.get('entity', '')
             params[p_name] = val
 
-        try:
-            return self.graph.query(cypher, params=params)
-        except Exception as e:
-            print(f"Cypher 执行失败: {e}, Cypher: {cypher}, params: {params}")
-            return []
+        from neo4j import GraphDatabase, Query, READ_ACCESS
+        with GraphDatabase.driver(**NEO4J_READ_CONFIG, connection_timeout=5) as driver:
+            with driver.session(default_access_mode=READ_ACCESS) as session:
+                rows = session.run(Query(cypher, timeout=5), params)
+                result = []
+                for row in rows:
+                    result.append(row.data())
+                    if len(result) >= 50:
+                        break
+                return result
 
     # 4. 生成回答
     def _generate_answer(self, question, query_result):
+        if not query_result:
+            return "当前图谱未查到可确认的商品记录，请补充品牌、类别或商品名称。"
         prompt = """
-                你是一个电商智能客服，根据用户问题，以及数据库查询结果生成一段简洁、准确、带有幽默性的自然语言回答。
+                你是一个电商智能客服，根据用户问题，以及数据库查询结果生成一段简洁、准确、的自然语言回答。
                 用户问题: {question}
                 数据库返回结果: {query_result}
         """

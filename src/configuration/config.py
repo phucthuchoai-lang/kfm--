@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-from absl.logging import LOG_DIR
+load_dotenv(Path(__file__).resolve().parents[2] / '.env')
 
 #1.目录路径
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -31,16 +33,19 @@ LABELS =['B','I','O']
 
 # 5. 数据库连接
 MYSQL_CONFIG = {
-    'host': 'localhost',
-    'port': 3306,
-    'user': 'root',
-    'password': '123456',
-    'database': 'gmall',
+    "host": os.getenv("MYSQL_HOST", "127.0.0.1"),
+    "port": int(os.getenv("MYSQL_PORT", "3306")),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", ""),
+    "database": os.getenv("MYSQL_DATABASE", "gmall"),
+    "connect_timeout": 5,
 }
-
 NEO4J_CONFIG = {
-    'uri': "neo4j://localhost:7687",
-    'auth': ("neo4j", "12345678")
+    "uri": os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687"),
+    "auth": (os.getenv("NEO4J_USERNAME", "neo4j"), os.getenv("NEO4J_PASSWORD", "")),
 }
-
-API_KEY = 'sk-025eb50a6eb44c709c5c078190353383'
+NEO4J_READ_CONFIG = {
+    "uri": NEO4J_CONFIG["uri"],
+    "auth": (os.getenv("NEO4J_READ_USERNAME", ""), os.getenv("NEO4J_READ_PASSWORD", "")),
+}
+API_KEY = os.getenv("DEEPSEEK_API_KEY", "")

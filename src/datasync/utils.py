@@ -1,6 +1,7 @@
 import pymysql
 from neo4j import GraphDatabase
 from pymysql.cursors import DictCursor
+import re
 
 from configuration.config import *
 
@@ -25,20 +26,40 @@ class Neo4jWriter:
 
     # 写入节点（批量，固定标签）
     def write_nodes(self, label: str, properties: list[dict]):
+        self._identifier(label)
+        if not properties:
+            return
         cypher = f"""
             UNWIND $batch AS item
-            MERGE (:{label} {{id: item.id, name: item.name}})
+            MERGE (n:{label} {{id: item.id}})
+            SET n += item
         """
         self.driver.execute_query(cypher, batch=properties)
 
     # 写入关系
     def write_relations(self, type: str, start_label, end_label, relations: list[dict]):
+        for value in (type, start_label, end_label):
+            self._identifier(value)
         cypher = f"""
                     UNWIND $batch AS item
                     MATCH (start:{start_label} {{id: item.start_id}}), (end:{end_label} {{id: item.end_id}})
                     MERGE (start)-[:{type}]->(end)
                 """
         self.driver.execute_query(cypher, batch=relations)
+
+    @staticmethod
+    def _identifier(value):
+        if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', value):
+            raise ValueError('Invalid graph identifier')
+
+    def ensure_unique_ids(self, labels):
+        """Run only after backup and cleanup of any existing duplicate IDs."""
+        for label in labels:
+            self._identifier(label)
+            self.driver.execute_query(f'CREATE CONSTRAINT {label}_unique_id IF NOT EXISTS FOR (n:{label}) REQUIRE n.id IS UNIQUE')
+
+    def close(self):
+        self.driver.close()
 
 if __name__ == '__main__':
 

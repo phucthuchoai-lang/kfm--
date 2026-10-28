@@ -14,7 +14,8 @@ from transformers import (
     TrainingArguments,
     Trainer,
     DataCollatorForTokenClassification,
-    EvalPrediction
+    EvalPrediction,
+    EarlyStoppingCallback
 )
 
 from src.configuration.config import *

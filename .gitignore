@@ -25,4 +25,9 @@ runs/
 .vscode/
 
 # 环境变量敏感配置
-# .env
+.env
+data/runtime/
+*.db
+*.db-wal
+*.db-shm
+test-results/

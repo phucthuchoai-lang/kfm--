@@ -1,0 +1,4 @@
+# Optional MySQL snapshots and Neo4j read-only retrieval; not needed for demo startup.
+-r requirements.txt
+PyMySQL>=1.1,<2
+neo4j>=5.28,<7
